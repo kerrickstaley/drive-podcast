@@ -1,0 +1,200 @@
+<link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons.css">
+<!-- TODO: figure out why jQuery doesn't work -->
+<!-- <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script> -->
+
+<script type="text/javascript">
+  var DEVELOPER_KEY = 'INSERT YOUR KEY HERE';
+  var DIALOG_DIMENSIONS = {width: 600, height: 425};
+  var pickerApiLoaded = false;
+  
+  // holds the folder id (after the user has selected it)
+  var folderId = null;
+  
+  /**
+   * Display the UI element with the given id, and hide others.
+   */
+  function display(id) {
+    var children = document.querySelectorAll('#contents > *');
+    for (var i = 0; i < children.length; i++) {
+      children[i].style = 'display: none';
+    }
+    document.getElementById(id).style = 'display: block';
+  }
+  
+  /**
+   * Loads the Google Picker API.
+   */
+  gapi.load('picker', {'callback': function() {
+    pickerApiLoaded = true;
+    display('start');
+  }});
+   
+  /**
+   * Step 1: Gets the user's OAuth 2.0 access token from the server-side script so that
+   * it can be passed to Picker. This technique keeps Picker from needing to
+   * show its own authorization dialog, but is only possible if the OAuth scope
+   * that Picker needs is available in Apps Script. Otherwise, your Picker code
+   * will need to declare its own OAuth scopes.
+   */
+  function getOAuthToken() {
+    google.script.run.withSuccessHandler(
+      createPicker
+    ).withFailureHandler(
+      alert
+    ).getOAuthToken();
+  }
+
+  /**
+   * Step 2: Creates a Picker that can access the user's directories. This function uses advanced
+   * options to hide the Picker's left navigation panel and default title bar.
+   *
+   * @param {string} token An OAuth 2.0 access token that lets Picker access the
+   *     file type specified in the addView call.
+   */
+  function createPicker(token) {
+    if (pickerApiLoaded && token) {
+      var view = new google.picker.DocsView(google.picker.ViewId.FOLDERS);
+      view.setSelectFolderEnabled(true);
+      var picker = new google.picker.PickerBuilder()
+          // Instruct Picker to display only folders in Drive. For other
+          // views, see https://developers.google.com/picker/docs/#otherviews
+          .addView(view)
+          // Hide the navigation panel so that Picker fills more of the dialog.
+          .enableFeature(google.picker.Feature.NAV_HIDDEN)
+          .setTitle("Select folder containing audio or video files")
+          .setOAuthToken(token)
+          .setDeveloperKey(DEVELOPER_KEY)
+          .setCallback(checkForLargeFiles)
+          // Instruct Picker to fill the dialog, minus 2 pixels for the border.
+          .setSize(DIALOG_DIMENSIONS.width - 2,
+              DIALOG_DIMENSIONS.height - 2)
+          .build();
+      picker.setVisible(true);
+    } else {
+      alert('Unable to load the file picker.');
+    }
+  }
+
+  /**
+   * Step 3: A picker callback that checks the specified folder for files larger than 25 MiB.
+   *
+   * For details on the response object, see https://developers.google.com/picker/docs/result
+   *
+   * @param {object} data The response object.
+   */
+  function checkForLargeFiles(data) {
+    var action = data[google.picker.Response.ACTION];
+    if (action == google.picker.Action.PICKED) {
+      var doc = data[google.picker.Response.DOCUMENTS][0];
+      var id = doc[google.picker.Document.ID];
+      var url = doc[google.picker.Document.URL];
+      var title = doc[google.picker.Document.NAME];
+      
+      folderId = id;
+      
+      google.script.run.withSuccessHandler(
+        selectSharing
+      ).withFailureHandler(function(error) {
+        alert(error.message);
+      }).doCheckForLargeFiles(id);
+      
+      display('processing');
+    }
+  }
+  
+  /**
+   * Step 4: Display the "sharing option" prompt, modifying the options based on whether there are
+   * large files in the selected folder.
+   */
+  function selectSharing(hasLargeFiles) {
+    if (hasLargeFiles) {
+      document.getElementById('files_under_25mib').style = 'display: none';
+      document.getElementById('share_link').disabled = 'disabled';
+    } else {
+      document.getElementById('files_over_25mib').style = 'display: none';
+    }
+      
+    display('select_sharing');
+  }
+  
+  /**
+   * Step 5: Create the podcast file!
+   *
+   * @param {boolean} sharePublically true if the folder should be shared publically, false if it
+   *     should only be shared to people with the link.
+   */
+  function createPodcast(sharePublically) {
+    google.script.run.withSuccessHandler(
+      displayResult
+    ).withFailureHandler(function(error) {
+      alert(error.message);
+    }).doFolder(folderId, sharePublically);
+    
+    display('processing');
+  }
+    
+  /**
+   * Step 6: Display the URL of the podcast file to the user.
+   */
+  function displayResult(url) {
+    display('result_container');
+    
+    document.getElementById('result').value = url;
+    document.getElementById('result').focus();
+    document.getElementById('result').select();
+  }
+</script>
+
+<div>
+  <h1>Podcast from Google Drive</h1>
+  <div>By Kerrick Staley. <a href="https://github.com/kerrickstaley/drive-podcast">GitHub</a></div>
+  <hr>
+  <div id="contents">
+    <div id="start">
+      <p>
+        This page allows you to create a podcast from audio or video files in your Google Drive.
+        Click the below button to get started.
+      </p>
+      <button id="select_files" onclick="getOAuthToken()">
+        Select folder containing your files...
+      </button>
+    </div>
+    <p id="processing">Processing, please wait...</p>
+    <div id="select_sharing">
+      <p>How would you like to share this folder?</p>
+      <button id="share_public" onclick="createPodcast(true)">Publically (recommended)</button>
+      <ul>
+        <li>anyone can find your podcast</li>
+        <li>you can easily add new files to your podcast</li>
+        <li>supports files larger than 25 MiB</li>
+      </ul>
+      <button id="share_link" onclick="createPodcast(false)">Only to people with the link</button>
+      <ul id="files_under_25mib">
+        <li>only people with the link can find your podcast</li>
+        <li>if you add new files, you will have to enter a new feed link into your player</li> 
+        <li>doesn't work with files larger than 25 MiB</li>
+      </ul>
+      <ul id="files_over_25mib">
+        <li id="files_too_large">
+          not available, because your folder contains files larger than 25 MiB
+        </li>
+      </ul>
+    </div>
+    <div id="result_container">
+      <p>Here is the link to your podcast! Enter this into your podcast player.</p>
+      <input id="result" type="text" readonly="readonly">
+      <br>
+      <p>
+        Reload this page to create another podcast.
+        <br>
+        Re-run this script if you want to add new files to your podcast.
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  #contents > * {
+    display: none;
+  }
+</style>
