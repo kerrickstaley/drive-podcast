@@ -163,13 +163,14 @@
     <p id="processing">Processing, please wait...</p>
     <div id="select_sharing">
       <p>How would you like to share this folder?</p>
-      <button id="share_public" onclick="createPodcast(true)">Publically (recommended)</button>
+      <button id="share_public" onclick="createPodcast(true)">Publically (BROKEN, DO NOT USE)</button>
       <ul>
+        <li>sadly, <a href="https://gsuiteupdates.googleblog.com/2015/08/deprecating-web-hosting-support-in.html" target="_top">Google killed this option</a></li>
         <li>anyone can find your podcast</li>
         <li>you can easily add new files to your podcast</li>
         <li>supports files larger than 25 MiB</li>
       </ul>
-      <button id="share_link" onclick="createPodcast(false)">Only to people with the link</button>
+      <button id="share_link" onclick="createPodcast(false)">Only to people with the link (recommended)</button>
       <ul id="files_under_25mib">
         <li>only people with the link can find your podcast</li>
         <li>if you add new files, you will have to enter a new feed link into your player</li> 
