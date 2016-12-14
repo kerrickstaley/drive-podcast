@@ -104,7 +104,10 @@ function writeOutput(folder, output) {
  *   https://docs.google.com/a/kerrickstaley.com/uc?id=FILE_ID
  */
 function getSharedUrl(file) {
-  return file.getUrl().replace('/file/d/', '/uc?id=').replace('/edit?usp=drivesdk', '');
+  return file.getUrl()
+    .replace('/file/d/', '/uc?id=')
+    .replace('/edit?usp=drivesdk', '')
+    .replace('/view?usp=drivesdk', '');
 }
 
 /**
