@@ -1,6 +1,4 @@
 <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons.css">
-<!-- TODO: figure out why jQuery doesn't work -->
-<!-- <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script> -->
 
 <script type="text/javascript">
   var DEVELOPER_KEY = 'INSERT YOUR KEY HERE';
@@ -22,13 +20,15 @@
   }
   
   /**
-   * Loads the Google Picker API.
-   */
-  gapi.load('picker', {'callback': function() {
-    pickerApiLoaded = true;
-    display('start');
-  }});
-   
+   * Step 0: Load the JS for the picker UI after api.js loads.
+   */ 
+  function onApiLoad() {
+    gapi.load('picker', {'callback': function() {
+      pickerApiLoaded = true;
+      display('start');
+    }});
+  }
+  
   /**
    * Step 1: Gets the user's OAuth 2.0 access token from the server-side script so that
    * it can be passed to Picker. This technique keeps Picker from needing to
@@ -198,3 +198,5 @@
     display: none;
   }
 </style>
+
+<script src="https://apis.google.com/js/api.js?onload=onApiLoad"></script>
