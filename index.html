@@ -68,6 +68,7 @@
           // Instruct Picker to fill the dialog, minus 2 pixels for the border.
           .setSize(DIALOG_DIMENSIONS.width - 2,
               DIALOG_DIMENSIONS.height - 2)
+          .setOrigin(google.script.host.origin)
           .build();
       picker.setVisible(true);
     } else {
